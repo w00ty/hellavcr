@@ -85,6 +85,10 @@ $config['newzbin'] = array(
   'base_url' => 'www.newzbin.com/'
 );
 
+//pid
+$config['lock_file'] = '/var/lock/hellavcr.pid';
+$config['pid_files'] = array();
+
 //clever beginnings to tweets, rest of sentence ends in: [show] [season]x[episode]
 $config['hollers'] = array(
   'queued '

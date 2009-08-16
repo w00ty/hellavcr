@@ -15,6 +15,7 @@ function process_tv() {
   global $config, $twitter;
   $shows_added = 0;
   $mail_string = '';
+  print date($config['logging']['date_format']) . 'hellaVCR/' . $config['version'] . "\n";
   print date($config['logging']['date_format']) . "processing tv...\n";
   
   //check to make sure the file exists
@@ -769,9 +770,51 @@ function saveXML($simplexml) {
   //return true;
 }
 
+//
+function clean_pid() {
+  global $config;
+  foreach($config['pid_files'] as $file) {
+    $f = @fopen($file, 'r');
+    if(!$f) {
+      continue;
+    }
+    flock($f, LOCK_SH);
+    $pid = trim(fgets($f));
+    fclose($f);
+    if($pid == posix_getpid()) {
+      unlink($file);
+    }
+  }
+}
+
+//
+function check_pid() {
+  global $config;
+  $f = @fopen($config['lock_file'], 'r');
+  
+  //lock file found
+  if($f) {
+    flock($f, LOCK_SH);
+    $pid = trim(fgets($f));
+    if(posix_getsid($pid)) {
+      die('hellaVCR is already running! (pid ' . $pid . ' from ' . $config['lock_file'] . ")\n");
+    }
+    fclose($f);
+  }
+  
+  //write pid file
+  $f = fopen($config['lock_file'], 'w');
+  flock($f, LOCK_EX);
+  fwrite($f, posix_getpid() . "\n");
+  fclose($f);
+  $config['pid_files'][] = $config['lock_file'];
+}
+
 ##### main call
 
 if(empty($hellavcr_include)) {
+  register_shutdown_function('clean_pid');
+  check_pid();
   process_tv();
 }
 
