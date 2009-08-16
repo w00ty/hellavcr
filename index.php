@@ -431,7 +431,7 @@ if(file_exists($config['xml_tv'])) {
     }
 ?>
     <div class="listing" id="listing_<?php print $showID; ?>">
-      <a name="<?php print $show->name; ?>"></a>
+      <a name="<?php print urlencode($show->name); ?>"></a>
       <?php
       //poster
       $poster = $show->poster;
