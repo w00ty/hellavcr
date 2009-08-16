@@ -63,7 +63,7 @@ $GLOBALS['sources'] = array(
 
 ##### system values
 
-$config['version'] = '0.7';
+$config['version'] = '0.8';
 $config['debug_separator'] = ' | ';
 $config['project_url'] = 'http://code.google.com/p/hellavcr/';
 $config['logging'] = array(
@@ -80,9 +80,9 @@ $config['thetvdb'] = array(
   'api_key' => 'A6D11F92201EEBFA'
 );
 $config['newzbin'] = array(
-  'root_url' => 'https://v3.newzbin.com/',
+  'root_url' => 'https://www.newzbin.com/',
   'protocol' => 'https://',
-  'base_url' => 'v3.newzbin.com/'
+  'base_url' => 'www.newzbin.com/'
 );
 
 //clever beginnings to tweets, rest of sentence ends in: [show] [season]x[episode]
