@@ -277,7 +277,7 @@ function process_tv() {
                 }
                 
                 //build mail string
-								if($nzb_downloaded && $config['mail']) {
+								if($nzb_downloaded) {
 								  $mail_string .= $show->name . ' ' . $episode_string . ' (' . $GLOBALS['formats'][strval($show->format)] . ', ' . $GLOBALS['languages'][strval($show->language)] . ")\n";
 								}
 								
@@ -333,7 +333,7 @@ function process_tv() {
     }
     
     //send email
-    if($config['mail'] && $mail_string != '') {
+    if(!empty($config['mail']) && $mail_string != '') {
       $mail_sent = mail($config['mail_to'], '[hellaVCR] ' . substr_count($mail_string, "\n") . ' episodes found', "The following episodes have been queued:\n\n" . $mail_string, 'From: hellaVCR <hellaVCR@faketown.com>');
       print date($config['logging']['date_format']) . 'emailing queue' . $config['debug_separator'] . ($mail_sent ? 'done' : 'FAIL') . "\n"; 
     }
