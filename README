@@ -5,7 +5,7 @@ hellaVCR requires
 
     * PHP 5 (cli)
     * SimpleXML
-    * cURL
+    * cURL (w/ SSL support)
     * a Newzbin account
     * a usenet downloader (anything that support nzb files) 
 
@@ -15,7 +15,8 @@ Optional components
     * sabnzbd+
     * twitter account
     * mail server
-    * xbmc/plex 
+    * xbmc (http://xbmc.org) / plex (http://plexapp.com)
+    * prowl (http://prowl.weks.net/)
 
 Notes about upgrading
 

@@ -73,7 +73,13 @@ $config = array(
   'print_day_headers' => true,
   
   //hide the download history if you don't want it
-  'hide_download_history' => false
+  'hide_download_history' => false,
+  
+  //prowl
+  'prowl' => false,
+  'prowl_apikey' => '',
+  'prowl_priority' => 0
+
 );
 
 ?>

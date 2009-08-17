@@ -80,7 +80,7 @@ $config['thetvdb'] = array(
   'api_key' => 'A6D11F92201EEBFA'
 );
 $config['newzbin'] = array(
-  'root_url' => 'https://www.newzbin.com/',
+  'root_url' => 'https://www.newzbin.com/', 
   'protocol' => 'https://',
   'base_url' => 'www.newzbin.com/'
 );

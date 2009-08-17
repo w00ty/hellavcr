@@ -8,6 +8,10 @@ if($config['twitter']) {
   require_once('classes/twitter.class.php');
   $twitter = new Twitter($config['twitter_username'], $config['twitter_password']);
 }
+if(!empty($config['prowl'])) {
+  require_once('classes/ProwlPHP/ProwlPHP.php');
+  $prowl = new Prowl($config['prowl_apikey']);
+}
 date_default_timezone_set(isset($config['timezone']) ? $config['timezone'] : 'US/Pacific');
 
 //
@@ -330,8 +334,14 @@ function process_tv() {
     
     //send email
     if($config['mail'] && $mail_string != '') {
-      $mail_sent = mail($config['mail_to'], '[hellaVCR] ' . substr_count($mail_string, "\n") . ' episodes found', "The following episodes have been queued in hellanzb:\n\n" . $mail_string, 'From: hellaVCR <hellaVCR@faketown.com>');
+      $mail_sent = mail($config['mail_to'], '[hellaVCR] ' . substr_count($mail_string, "\n") . ' episodes found', "The following episodes have been queued:\n\n" . $mail_string, 'From: hellaVCR <hellaVCR@faketown.com>');
       print date($config['logging']['date_format']) . 'emailing queue' . $config['debug_separator'] . ($mail_sent ? 'done' : 'FAIL') . "\n"; 
+    }
+    
+    //send prowl
+    if(!empty($config['prowl']) && $mail_string != '') {
+      $prowl_sent = send_prowl(substr_count($mail_string, "\n") . ' episodes found', "The following episodes have been queued:\n\n" . $mail_string);
+      print date($config['logging']['date_format']) . 'sending prowl notification' . $config['debug_separator'] . $prowl_sent . "\n";
     }
 
 		//write new xml file    
@@ -808,6 +818,18 @@ function check_pid() {
   fwrite($f, posix_getpid() . "\n");
   fclose($f);
   $config['pid_files'][] = $config['lock_file'];
+}
+
+//
+function send_prowl($event, $description) {
+  global $config, $prowl;
+  $prowl->push(array(
+    'application' => 'hellaVCR',
+    'event' => $event,
+    'description' => $description,
+    'priority' => $config['prowl_priority']
+  ), true);
+  return $prowl->getError();
 }
 
 ##### main call
