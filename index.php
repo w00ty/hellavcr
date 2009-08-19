@@ -320,7 +320,29 @@ if($config['check_for_update']) {
     $version = substr($version, strpos($version, 'Current Version:'));
     $version = substr($version, 0, strpos($version, '</strong'));
     $version = substr($version, strpos($version, '>') + 1);
-    if(floatval($config['version']) < floatval($version)) { ?>
+    
+    $newVersion = false;
+    
+    $installedParts = explode('.', $config['version']);
+    if(sizeof($installedParts) == 2) $installedParts[2] = 0;
+    $newParts = explode('.', $version);
+    if(sizeof($newParts) == 2) $newParts[2] = 0;
+    
+    if($installedParts[0] < $newParts[0]) {
+      $newVersion = true;
+    }
+    else if($installedParts[0] == $newParts[0]) {
+      if($installedParts[1] < $newParts[1]) {
+        $newVersion = true;
+      }
+      else if($installedParts[1] == $newParts[1]) {
+        if($installedParts[2] < $newParts[2]) {
+          $newVersion = true;
+        }
+      }
+    }
+    
+    if($newVersion) { ?>
     <div class="versionBox">A newer version of hellaVCR is out! <a target="_blank" href="<?php print $config['project_url']; ?>"><img alt="download" src="images/download.png" /> Download version <strong><?php print $version; ?></strong></a></div>
     <?php }
   }
