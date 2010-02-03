@@ -656,12 +656,12 @@ function download_nzb($newzbin_id) {
 	$raw_nzb = curl_exec($ch);
 	
 	/*
-	[X-DNZB-Name] =>	Eureka - 3x05 - Show Me the Mummy
-	[X-DNZB-Category] =>	TV
-	[X-DNZB-MoreInfo] =>	http://www.tvrage.com/Eureka/episodes/664264/3x05/
-	[X-DNZB-NFO] =>	 196018317
-	[X-DNZB-RCode] =>	 200
-	[X-DNZB-RText] =>	 OK, NZB content follows
+	[X-DNZB-Name] => Eureka - 3x05 - Show Me the Mummy
+	[X-DNZB-Category] => TV
+	[X-DNZB-MoreInfo] => http://www.tvrage.com/Eureka/episodes/664264/3x05/
+	[X-DNZB-NFO] =>	196018317
+	[X-DNZB-RCode] => 200
+	[X-DNZB-RText] => OK, NZB content follows
 	*/
 	
 	switch($nzb_headers['X-DNZB-RCode']) {
@@ -783,6 +783,8 @@ function saveXML($simplexml) {
 //
 function clean_pid() {
 	global $config;
+	if(!function_exists('posix_getpid')) return true;
+	
 	foreach($config['pid_files'] as $file) {
 		$f = @fopen($file, 'r');
 		if(!$f) {
@@ -800,6 +802,7 @@ function clean_pid() {
 //
 function check_pid() {
 	global $config;
+	if(!function_exists('posix_getpid')) return true;
 	$f = @fopen($config['lock_file'], 'r');
 	
 	//lock file found
