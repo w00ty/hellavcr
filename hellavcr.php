@@ -210,7 +210,7 @@ function process_tv() {
 				//loop over all mising episodes
 				$current_season = intval($show->season);
 				while($current_season <= $latest_season && $current_season <= sizeof($show_info['episodelist'])) {
-					$current_episode = ($current_season > intval($show->season) ? 1 : intval($show->episode + 1));
+					$current_episode = ($current_season > intval($show->season) ? 0 : intval($show->episode + 1));
 						
 					while($current_episode <= $latest_episode || $current_season < $latest_season) {
 						$episode_string = $current_season . 'x' . sprintf('%02d', $current_episode);
@@ -528,18 +528,20 @@ function get_show_info($show, $ep = '', $exact = '', $thetvdbid = 0) {
 				
 				//create simplexml object
 				$raw_xml = curl_exec($ch);
-				$tvrage_sxe = simplexml_load_string($raw_xml);
+				$tvrage_sxe = @simplexml_load_string($raw_xml);
 		
 				//loop over each season
-				$seasons = $tvrage_sxe->xpath('/Show/Episodelist/Season');
-				foreach($seasons as $season) {
-					$show_info['episodelist'][intval($season['no'])] = array();
-					foreach($season->episode as $episode) {
-						$show_info['episodelist'][intval($season['no'])][] = array(
-							'num' => strval($episode->seasonnum),
-							'aired' => strtotime($episode->airdate),
-							'title' => strval($episode->title)
-						);
+				if($tvrage_sxe) {
+					$seasons = $tvrage_sxe->xpath('/Show/Episodelist/Season');
+					foreach($seasons as $season) {
+						$show_info['episodelist'][intval($season['no'])] = array();
+						foreach($season->episode as $episode) {
+							$show_info['episodelist'][intval($season['no'])][] = array(
+								'num' => strval($episode->seasonnum),
+								'aired' => strtotime($episode->airdate),
+								'title' => strval($episode->title)
+							);
+						}
 					}
 				}
 			}
