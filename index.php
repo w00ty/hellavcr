@@ -1,4 +1,6 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 'off');
 $hellavcr_include = true;
 require_once('hellavcr.config.php');
 require_once('hellavcr.vars.php');
@@ -351,11 +353,14 @@ if($config['check_for_update']) {
 <?php if(!file_exists($config['xml_tv'])) { ?>
 		<div class="errorBox">TV show XML file not found! (<?php print $config['xml_tv']; ?>)</div>
 <?php } ?>
-<?php if($config['newzbin_handler'] == 'nzb' && !file_exists($config['nzb_queue'])) { ?>
+<?php if($config['nzb_handler'] == 'nzb' && !file_exists($config['nzb_queue'])) { ?>
 		<div class="errorBox">NZB directory does not exist! (<?php print $config['nzb_queue']; ?>)</div>
 <?php } ?>
-<?php if($config['newzbin_handler'] == 'nzb' && ($config['newzbin_username'] == 'username' || strlen(trim($config['newzbin_username'])) == 0) && ($config['newzbin_password'] == 'password' || strlen(trim($config['newzbin_password'])) == 0)) { ?>
-		<div class="errorBox">Newzbin account required to download NZB files!</div>
+<?php if($config['nzb_handler'] == 'nzb' && $config['nzb_site'] == 'newzbin' && ($config['newzbin_username'] == 'username' || strlen(trim($config['newzbin_username'])) == 0) && ($config['newzbin_password'] == 'password' || strlen(trim($config['newzbin_password'])) == 0)) { ?>
+		<div class="errorBox">newzbin account required to download NZB files!</div>
+<?php } ?>
+<?php if($config['nzb_handler'] == 'nzb' && $config['nzb_site'] == 'nzbmatrix' && ($config['nzbmatrix_username'] == 'username' || strlen(trim($config['nzbmatrix_username'])) == 0) && ($config['nzbmatrix_key'] == 'apikey' || strlen(trim($config['nzbmatrix_key'])) == 0)) { ?>
+		<div class="errorBox">nzbmatrix account required to download NZB files!</div>
 <?php } ?>
 <?php if(!is_writeable('posters/')) { ?>
 		<div class="errorBox">Posters directory is not writable! (<?php print getcwd(); ?>/posters/)</div>

@@ -1,5 +1,6 @@
 <?php
 error_reporting(E_ALL);
+ini_set('display_errors', 'off');
 set_time_limit(0);
 require_once('hellavcr.config.php');
 require_once('hellavcr.vars.php');
@@ -54,7 +55,7 @@ function process_tv() {
 			
 			//no show info (skip)
 			if(empty($show_info)) {
-				print date($config['logging']['date_format']) . '	 get show info FAILED! (' . $config['info_scraper'] . " likely down)\n";
+				print date($config['logging']['date_format']) . '	get show info FAILED! (' . $config['info_scraper'] . " likely down)\n";
 				continue;
 			}
 			
@@ -94,7 +95,7 @@ function process_tv() {
 			//auto update show name to match info scraper
 			if($config['update_show_name'] && strlen(trim($show_info['name'])) > 0 && trim($show->name) != $show_info['name']) {
 				$show->name = $show_info['name'];
-				print date($config['logging']['date_format']) . '	 name updated to match ' . $config['info_scraper'] . ': ' . $show->name . "\n";
+				print date($config['logging']['date_format']) . '	name updated to match ' . $config['info_scraper'] . ': ' . $show->name . "\n";
 			}
 			
 			//update tvrage series id
@@ -165,7 +166,7 @@ function process_tv() {
 			if(!$show->next) $show->addChild('next', htmlspecialchars(trim($next_info)));
 			else $show->next = htmlspecialchars(trim($next_info));
 			
-			//print date($config['logging']['date_format']) . '	 next episode: ' . $show_info['Next Episode']['episode'] . "\n";
+			//print date($config['logging']['date_format']) . '	next episode: ' . $show_info['Next Episode']['episode'] . "\n";
 			
 			//update next timestamp (includes date and time)
 			if(strpos($show_info['RFC3339'], 'T:00-') !== false) {
@@ -203,7 +204,7 @@ function process_tv() {
 					$latest_episode = intval($latest_episode) + 1;
 				}
 				
-				print date($config['logging']['date_format']) . '	 last episode: ' . $show->season . 'x' . sprintf('%02d', $show->episode) . "\n";
+				print date($config['logging']['date_format']) . '	last episode: ' . $show->season . 'x' . sprintf('%02d', $show->episode) . "\n";
 				$one_ep_behind = ($show->season == $latest_season && $show->episode == $latest_episode - 1);
 				$skipped_episodes = 0;
 				
@@ -218,44 +219,63 @@ function process_tv() {
 						
 						//episode found, attempt to queue
 						if($episode_info['Episode Info']) {
-							//search newzbin
-							$newzbin_info = search_newzbin($show->name, $show->year, $current_season, $current_episode, $show->language, $show->format, $show->source);
+							$nzb_info = false;
+							
+							$nzb_info = search_nzb(array(
+								'show' => $show->name,
+								'year' => $show->year,
+								'season' => $current_season,
+								'episode' => $current_episode,
+								'language' => $show->language,
+								'format' => $show->format,
+								'source' => $show->source
+							));
 							
 							$nzb_downloaded = false;
 							$double_ep = false;
 							
 							//id found
-							if($newzbin_info) {
+							if($nzb_info) {
+								//nzbmatrix double ep
+								switch($config['nzb_site']) {
+									case 'nzbmatrix':
+										$double_ep = (strpos($nzb_info['title'], 'E' . sprintf('%02d', $current_episode) . 'E' . sprintf('%02d', $current_episode + 1)));
+										break;
+									case 'newzbin':
+									default:
+										$double_ep = (strpos($nzb_info['title'], $current_season . 'x' . sprintf('%02d', $current_episode + 1)) !== false);
+								}
+								
 								//double episode found
-								if(strpos($newzbin_info['title'], $current_season . 'x' . sprintf('%02d', $current_episode + 1)) !== false) {
+								if($double_ep) {
 									$current_episode++;
 									$episode_string .= '-' . sprintf('%02d', $current_episode);
 									$double_ep = true;
 									print 'double episode found' . $config['debug_separator'];
 								}
 								
-								switch($config['newzbin_handler']) {
+								switch($config['nzb_handler']) {
 									//move to directory
 									case 'nzb':
-										$nzb_downloaded = download_nzb($newzbin_info['id']);
+										$nzb_downloaded = download_nzb($nzb_info);
 										break;
 									
 									//send to hellanzb
 									case 'hellanzb':
-										$nzb_downloaded = send_to_hellanzb($newzbin_info['id']);
+										$nzb_downloaded = send_to_hellanzb($nzb_info);
 										if($nzb_downloaded) $shows_added++;
 										break;
 										
 									//send to sabnzbd
 									case 'sabnzbd':
-										$nzb_downloaded = send_to_sabnzbd($newzbin_info['id']);
+										$nzb_downloaded = send_to_sabnzbd($nzb_info, $config['nzb_site'] == 'nzbmatrix');
 										if($nzb_downloaded) $shows_added++;
 										break;
 								}
 
 								//newzbin has a limit of 5 nzb's per minute
 								//rate limit not needed in nzb mode since download_nzb handles the exact time to wait
-								if($config['newzbin_handler'] != 'nzb' && $shows_added % 5 == 0) {
+								if($config['nzb_handler'] != 'nzb' && $shows_added % 5 == 0) {
 									sleep(60);
 								}
 								
@@ -309,16 +329,12 @@ function process_tv() {
 							}
 							
 							//increment last episode for the show
-							//if(!$one_ep_behind || ($one_ep_behind && $nzb_downloaded)) {
 							if($nzb_downloaded) {
 								$show->season = $current_season;
 								$show->episode = $current_episode;
 							}
 							
 							$current_episode++;
-							//if($skipped_episodes >= 5) {
-							//	break;
-							//}
 						}
 						//invalid episode, proceed to next season
 						else {
@@ -383,7 +399,7 @@ function get_show_info($show, $ep = '', $exact = '', $thetvdbid = 0) {
 	
 	if(empty($config['info_scraper'])) $config['info_scraper'] = '';
 	switch($config['info_scraper']) {
-		//use thetvdb api
+		//use thetvdb api (IN PROGRESS)
 		case 'thetvdb':
 			//get mirrors
 			$sxe_mirrors = simplexml_load_string(file_get_contents('http://www.thetvdb.com/api/' . $config['thetvdb']['api_key'] . '/mirrors.xml'));
@@ -553,47 +569,136 @@ function get_show_info($show, $ep = '', $exact = '', $thetvdbid = 0) {
 	return $show_info;
 }
 
-//
-function search_newzbin($show, $year, $season, $episode, $language, $format, $source) {
+//params:
+// show, year, season, episode, language, format, source
+function search_nzb($params) {
 	global $config;
 	
-	//main query
-	$q = '"' . str_replace('"', '\"', $show) . ' - ' . $season . 'x' . sprintf('%02d', $episode) . '" OR "' . str_replace('"', '\"', $show) . ' (' . $year . ') - ' . $season . 'x' . sprintf('%02d', $episode) . '"';
-	$q_debug = $show . ' - ' . $season . 'x' . sprintf('%02d', $episode);
-	print date($config['logging']['date_format']) . '	 searching newzbin for ' . $q_debug . $config['debug_separator'];
+	$q_debug = $params['show'] . ' - ' . $params['season'] . 'x' . sprintf('%02d', $params['episode']);
+	print date($config['logging']['date_format']) . '	searching ' . $config['nzb_site'] . ' for ' . $q_debug . $config['debug_separator'];
 	
-	//formatted query
-	$query = build_newzbin_search_string($q, $language, $format, $source, true, true);
-	
-	//send to newzbin
-	if($fp = @fopen($query, 'r')) {
-		$line = @fgetcsv($fp);
-		
-		/*
-		0: posted date
-		1: nzb id
-		2: nzb title
-		3: newzbin url
-		4: tv url
-		5: newsgroup names (separated by +)
-		*/
-		
-		//newzbin id found
-		if($line[1] > 0) {
-			print 'found nzb ID ' . $line[1] . $config['debug_separator'];
-			return array('id' => $line[1], 'title' => $line[2]);
-		}
-		//newzbin id not found
-		else {
-			print 'nzb ID not found' . $config['debug_separator'];
-			return false;
-		}
+	switch($config['nzb_site']) {
+		case 'nzbmatrix':
+			//main query
+			$q = $params['show'] . ' ' . 'S' . sprintf('%02d', $params['season']) . 'E' . sprintf('%02d', $params['episode']);
+			
+			//formatted query
+			$query = build_nzbmatrix_search_string(array(
+				'term' => $q,
+				'format' => $params['format']
+			));
+			
+			//send to nzbmatrix
+			if($result = @file_get_contents($query, 'r')) {
+				$result = str_replace("\n", '', $result);
+				$results = explode('|', $result);
+				
+				/*
+				NZBID:444027; = NZB ID On Site
+				NZBNAME:mandriva linux 2009; = NZB Name On Site
+				LINK:nzbmatrix.com/nzb-details.php?id=444027&hit=1; = Link To NZB Details PAge
+				SIZE:1469988208.64; = Size in bytes
+				INDEX_DATE:2009-02-14 09:08:55; = Indexed By Site (Date/Time GMT)
+				USENET_DATE:2009-02-12 2:48:47; = Posted To Usenet (Date/Time GMT)
+				CATEGORY:TV > Divx/Xvid; = NZB Post Category
+				GROUP:alt.binaries.linux; = Usenet Newsgroup
+				COMMENTS:0; = Number Of Comments Posted
+				HITS:174; = Number Of Hits (Views)
+				NFO:yes; = NFO Present
+				REGION:0; = Region Coding (See notes)
+				*/
+				
+				foreach($results as $result) {
+					$lines = explode(';', $result);
+					$parts = array();
+					foreach($lines as $line) {
+						@list($key, $value) = @explode(':', $line);
+						$parts[$key] = $value;
+					}
+					
+					$name_ok = true;
+					
+					if(isset($parts['NZBNAME'])) {
+						//check name has these terms
+						if(is_array($config['nzbmatrix_hasterms'])) {
+							foreach($config['nzbmatrix_hasterms'] as $term) {
+								if(stripos($parts['NZBNAME'], $term) === false) {
+									$name_ok = false;
+								}
+							}
+						}
+					
+						//check it doesn't have these ones
+						if($name_ok && is_array($config['nbzmatrix_noterms'])) {
+							foreach($config['nbzmatrix_noterms'] as $term) {
+								if(stripos($parts['NZBNAME'], $term) !== false) {
+									$name_ok = false;
+								}
+							}
+						}
+					}
+					else {
+						$name_ok = false;
+					}
+					
+					//found
+					if($name_ok) {
+						print 'found nzb ID ' . $parts['NZBID'] . $config['debug_separator'];
+						return array(
+							'id' => $parts['NZBID'],
+							'title' => $parts['NZBNAME'],
+							'url' => $config['nzbmatrix']['protocol'] . $parts['LINK']
+						);
+					}
+				}
+				
+				print 'nzb ID not found' . $config['debug_separator'];
+				return false;
+			}
+			
+			break;
+			
+		case 'newzbin':
+			//main query
+			$q = '"' . str_replace('"', '\"', $params['show']) . ' - ' . $params['season'] . 'x' . sprintf('%02d', $params['episode']) . '" OR "' . str_replace('"', '\"', $params['show']) . ' (' . $params['year'] . ') - ' . $params['season'] . 'x' . sprintf('%02d', $params['episode']) . '"';
+
+			//formatted query
+			$query = build_newzbin_search_string($q, $params['language'], $params['format'], $params['source'], true, true);
+
+			//send to newzbin
+			if($fp = @fopen($query, 'r')) {
+				$line = @fgetcsv($fp);
+
+				/*
+				0: posted date
+				1: nzb id
+				2: nzb title
+				3: newzbin url
+				4: tv url
+				5: newsgroup names (separated by +)
+				*/
+
+				//newzbin id found
+				if($line[1] > 0) {
+					print 'found nzb ID ' . $line[1] . $config['debug_separator'];
+					return array(
+						'id' => $line[1],
+						'title' => $line[2]
+					);
+				}
+				//newzbin id not found
+				else {
+					print 'nzb ID not found' . $config['debug_separator'];
+					return false;
+				}
+			}
+			
+			break;
 	}
-	
 }
 
 //common function to build up the full newzbin search string
-//used by search_newzbin() and the newzbin icon on index.php
+//used by search_nzb() and the newzbin icon on index.php
 function build_newzbin_search_string($name, $language, $format, $source, $csv = false, $useauth = false) {
 	global $config;
 	
@@ -622,7 +727,7 @@ function build_newzbin_search_string($name, $language, $format, $source, $csv = 
 		$query[] = 'ps_rb_source=' . $source;
 	}
 	if(!empty($config['newzbin_groups'])) {
-	 $query[] = 'group=' . urlencode($config['newzbin_groups']);
+		$query[] = 'group=' . urlencode($config['newzbin_groups']);
 	}
 	if($csv) {
 		$query[] = 'feed=csv';
@@ -631,78 +736,137 @@ function build_newzbin_search_string($name, $language, $format, $source, $csv = 
 	return $config['newzbin']['protocol'] . ($useauth ? $config['newzbin_username'] . ':' . $config['newzbin_password'] . '@' : '') . $config['newzbin']['base_url'] . 'search/?' . implode( '&', $query);
 }
 
+//common function to build up the full nzbmatrix search string
+//used by search_nzbmatrix() and the nzbmatrix icon on index.php (XXX do we need the icon???)
+function build_nzbmatrix_search_string($params) {
+	global $config;
+
+	//build up params
+	$query = array(
+		'search=' . urlencode($params['term']),
+		'age=' . $config['ng_retention'],
+		'catid=' . $GLOBALS['nzbmatrix_formats'][strval($params['format'])],
+		'num=5',
+		'username=' . $config['nzbmatrix_username'],
+		'apikey=' . $config['nzbmatrix_key']
+	);
+	if(!empty($config['newzbin_groups'])) {
+		$query[] = 'group=' . urlencode($config['newzbin_groups']);
+	}
+	
+	return $config['nzbmatrix']['protocol'] . $config['nzbmatrix']['base_url'] . 'api-nzb-search.php?' . implode( '&', $query);
+}
+
 //
-function download_nzb($newzbin_id) {
+function download_nzb($nzb_info) {
 	global $config, $nzb_headers;
 	print 'downloading nzb' . $config['debug_separator'];
 	
-	//newzbin info blank
-	if(empty($config['newzbin_username']) || empty($config['newzbin_password'])) {
-		print 'FAIL (newzbin username/password not set)';
-		return false;
-	}
+	switch($config['nzb_site']) {
+		case 'nzbmatrix':
+			//newzbin info blank
+			if(empty($config['nzbmatrix_username']) || empty($config['nzbmatrix_key'])) {
+				print 'FAIL (nzbmatrix username/key not set)';
+				return false;
+			}
+			
+			$url = $config['nzbmatrix']['root_url'] . 'api-nzb-download.php?' . 'id=' . $nzb_info['id'] . '&username=' . $config['nzbmatrix_username'] . '&apikey=' . $config['nzbmatrix_key'];
+			$nzb = @file_get_contents($url);
+			
+			//error
+			if(stripos($nzb, 'error:') === 0) {
+				//api rate limited exceeded, so wait the required time and try again
+				if(preg_match('/please_wait_(\d+)/', $nzb, $matches)) {
+					$sec = $matches[1] + 1;
+					print 'FAIL (too many requests, retrying in ' . $sec . ' seconds';
+					sleep($sec);
+					return download_nzb($nzb_info);
+				}
+				
+				//other error
+				print 'FAIL (' . $nzb . ')';
+				return false;
+			}
+			//all good
+			else {
+				$fp_nzb = fopen($config['nzb_queue'] . str_replace('/', ' ', $nzb_info['title']) . '.nzb', 'w');
+				$nzb_written = fwrite($fp_nzb, $nzb);
+				print ($nzb_written ? 'written' : 'FAIL (writing the nzb, check directory permissions)');
+				return $nzb_written;
+			}
+			
+			break;
+			
+		case 'newzbin':
+			//newzbin info blank
+			if(empty($config['newzbin_username']) || empty($config['newzbin_password'])) {
+				print 'FAIL (newzbin username/password not set)';
+				return false;
+			}
 	
-	$nzb_headers = array();
-	$ch = curl_init();
-	curl_setopt_array($ch, array(
-		CURLOPT_URL => $config['newzbin']['root_url'] . 'api/dnzb/',
-		CURLOPT_USERAGENT => 'hellaVCR/' . $config['version'],
-		CURLOPT_POST => 1,
-		CURLOPT_HEADER => 0,
-		CURLOPT_RETURNTRANSFER => 1,
-		CURLOPT_SSL_VERIFYPEER => 0,
-		CURLOPT_HEADERFUNCTION => 'read_header',
-		CURLOPT_POSTFIELDS => 'username=' . $config['newzbin_username'] . '&password=' . $config['newzbin_password'] . '&reportid=' . $newzbin_id
-	));
+			$nzb_headers = array();
+			$ch = curl_init();
+			curl_setopt_array($ch, array(
+				CURLOPT_URL => $config['newzbin']['root_url'] . 'api/dnzb/',
+				CURLOPT_USERAGENT => 'hellaVCR/' . $config['version'],
+				CURLOPT_POST => 1,
+				CURLOPT_HEADER => 0,
+				CURLOPT_RETURNTRANSFER => 1,
+				CURLOPT_SSL_VERIFYPEER => 0,
+				CURLOPT_HEADERFUNCTION => 'read_header',
+				CURLOPT_POSTFIELDS => 'username=' . $config['newzbin_username'] . '&password=' . $config['newzbin_password'] . '&reportid=' . $nzb_info['id']
+			));
 	
-	$raw_nzb = curl_exec($ch);
+			$raw_nzb = curl_exec($ch);
 	
-	/*
-	[X-DNZB-Name] => Eureka - 3x05 - Show Me the Mummy
-	[X-DNZB-Category] => TV
-	[X-DNZB-MoreInfo] => http://www.tvrage.com/Eureka/episodes/664264/3x05/
-	[X-DNZB-NFO] =>	196018317
-	[X-DNZB-RCode] => 200
-	[X-DNZB-RText] => OK, NZB content follows
-	*/
+			/*
+			[X-DNZB-Name] => Eureka - 3x05 - Show Me the Mummy
+			[X-DNZB-Category] => TV
+			[X-DNZB-MoreInfo] => http://www.tvrage.com/Eureka/episodes/664264/3x05/
+			[X-DNZB-NFO] =>	196018317
+			[X-DNZB-RCode] => 200
+			[X-DNZB-RText] => OK, NZB content follows
+			*/
 	
-	switch($nzb_headers['X-DNZB-RCode']) {
-		case 200:
-			$filename = trim($nzb_headers['X-DNZB-Name']);
-			$filename = str_replace('/', ' ', $filename);
-			$fp_nzb = fopen($config['nzb_queue'] . $filename . '.nzb', 'w');
-			$nzb_written = fwrite($fp_nzb, $raw_nzb);
-			print ($nzb_written ? 'written' : 'FAIL (writing the nzb, check directory permissions)');
-			return $nzb_written;
-		case 400:
-			print 'FAIL (400: bad request, please supply all parameters)';
-			return false;
-		case 401:
-			print 'FAIL (401: unauthorized, check username/password)';
-			return false;
-		case 402:
-			print 'FAIL (402: premium account required)';
-			return false;
-		case 404:
-			print 'FAIL (404: data not found)';
-			return false;
-		case 450:
-			//api rate limited exceeded, so wait the required time and try again
-			print 'FAIL (450: too many requests)';
-			$wait_parts = explode(' ', $nzb_headers['X-DNZB-RText']);
-			print $config['debug_separator'] . 'waiting ' . $wait_parts[4] . ' second' . ($wait_parts[4] > 1 ? 's' : '') . $config['debug_separator'];
-			sleep($wait_parts[4] + 1);
-			download_nzb($newzbin_id);
-			return false;
-		case 500:
-			print 'FAIL (500: internal server error)';
-			return false;
-		case 503:
-			print 'FAIL (503: service unavailable, newzbin is down)';
-			return false;
-		default:
-			print 'FAIL (' . trim($nzb_headers['X-DNZB-RCode']) . ': ' . trim($nzb_headers['X-DNZB-RText']) . ')';
-			return false;
+			switch($nzb_headers['X-DNZB-RCode']) {
+				case 200:
+					$filename = trim($nzb_headers['X-DNZB-Name']);
+					$filename = str_replace('/', ' ', $filename);
+					$fp_nzb = fopen($config['nzb_queue'] . $filename . '.nzb', 'w');
+					$nzb_written = fwrite($fp_nzb, $raw_nzb);
+					print ($nzb_written ? 'written' : 'FAIL (writing the nzb, check directory permissions)');
+					return $nzb_written;
+				case 400:
+					print 'FAIL (400: bad request, please supply all parameters)';
+					return false;
+				case 401:
+					print 'FAIL (401: unauthorized, check username/password)';
+					return false;
+				case 402:
+					print 'FAIL (402: premium account required)';
+					return false;
+				case 404:
+					print 'FAIL (404: data not found)';
+					return false;
+				case 450:
+					//api rate limited exceeded, so wait the required time and try again
+					print 'FAIL (450: too many requests)';
+					$wait_parts = explode(' ', $nzb_headers['X-DNZB-RText']);
+					print $config['debug_separator'] . 'waiting ' . $wait_parts[4] . ' second' . ($wait_parts[4] > 1 ? 's' : '') . $config['debug_separator'];
+					sleep($wait_parts[4] + 1);
+					download_nzb($nzb_info);
+					return false;
+				case 500:
+					print 'FAIL (500: internal server error)';
+					return false;
+				case 503:
+					print 'FAIL (503: service unavailable, newzbin is down)';
+					return false;
+				default:
+					print 'FAIL (' . trim($nzb_headers['X-DNZB-RCode']) . ': ' . trim($nzb_headers['X-DNZB-RText']) . ')';
+					return false;
+			}
+			break;
 	}
 	
 	return true;
@@ -716,31 +880,41 @@ function read_header($ch, $string) {
 }
 
 //
-function send_to_hellanzb($newzbin_id) {
+function send_to_hellanzb($nzb_info) {
 	global $config;
 	print 'sending to hellanzb' . $config['debug_separator'];
 	
-	try {
-		$hc = new HellaController($config['hellanzb_server'], $config['hellanzb_port'], 'hellanzb', $config['hellanzb_password']);
+	switch($config['nzb_site']) {
+		case 'nzbmatrix':
+			print 'nzbmatrix + hellanzb are INCOMPATIBLE';
+			break;
+			
+		case 'newzbin':
+			try {
+				$hc = new HellaController($config['hellanzb_server'], $config['hellanzb_port'], 'hellanzb', $config['hellanzb_password']);
+			}
+			//error thrown, probably since hellanzb isn't running
+			catch(Exception $e) {
+				print 'hellanzb not running!';
+				return false;
+			}
+	
+			//use the hellanzb class to send the id
+			$hc->enqueueNewzbin($nzb_info['id']);
+	
+			//check hellanzb log to see if the id was processed successfully
+			//--
+			
+			print 'sent';
+			
+			break;
 	}
-	//error thrown, probably since hellanzb isn't running
-	catch(Exception $e) {
-		print 'hellanzb not running!';
-		return false;
-	}
 	
-	//use the hellanzb class to send the id
-	$hc->enqueueNewzbin($newzbin_id);
-	
-	//check hellanzb log to see if the id was processed successfully
-	//--
-	
-	print 'sent';
 	return true;
 }
 
 //
-function send_to_sabnzbd($newzbin_id, $isURL = false) {
+function send_to_sabnzbd($nzb_info, $isURL = false) {
 	global $config;
 	print 'sending to sabnzbd' . $config['debug_separator'];
 
@@ -753,7 +927,7 @@ function send_to_sabnzbd($newzbin_id, $isURL = false) {
 	//make curl call
 	$ch = curl_init();
 	curl_setopt_array($ch, array(
-		CURLOPT_URL => 'http://' . $config['sabnzbd_server'] . ':' . $config['sabnzbd_port'] . '/sabnzbd/api?mode=' . $modeString . $authString . $apiString . '&cat=' . $config['sabnzbd_category'] . '&pp=3&name=' . urlencode($newzbin_id) . $priority,
+		CURLOPT_URL => 'http://' . $config['sabnzbd_server'] . ':' . $config['sabnzbd_port'] . '/sabnzbd/api?mode=' . $modeString . $authString . $apiString . '&cat=' . $config['sabnzbd_category'] . '&pp=3&name=' . urlencode($nzb_info[$isURL ? 'url' : 'id']) . $priority,
 		CURLOPT_HEADER => 0,
 		CURLOPT_RETURNTRANSFER => 1
 	));
@@ -778,8 +952,6 @@ function saveXML($simplexml) {
 	$domDoc->preserveWhiteSpace = false;
 	$domDoc->loadXml($simplexml->asXml());
 	return file_put_contents($config['xml_tv'], $domDoc->saveXml());
-	//print $domDoc->saveXml();
-	//return true;
 }
 
 //

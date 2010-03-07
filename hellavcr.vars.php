@@ -59,7 +59,32 @@ $GLOBALS['sources'] = array(
 	'1024' => 'R5 Retail',
 	'2048' => 'Blu-ray',
 	'1073741824' => 'Unknown',
-);					
+);
+
+##### nzbmatrix
+
+//5 = DVD, 6 = Divx/Xvid, 41 = HD, 7 = Sports/Ent, 8 = other
+$GLOBALS['nzbmatrix_formats'] = array(
+	'1' => '6',
+	'2' => '5',
+	'4' => '5',
+	'8' => '6',
+	'16' => '6',
+	'32' => '41',
+	'64' => '41',
+	'128' => '0',
+	'256' => '5',
+	'512' => '8',
+	'1024' => '8',
+	'2048' => '41',
+	'65536' => '41',
+	'131072' => '41',
+	'262144' => '41',
+	'524288' => '41',
+	'1048576' => '41',
+	'2097152' => '41',
+	'1073741824' => '8'
+);
 
 ##### system values
 
@@ -83,6 +108,11 @@ $config['newzbin'] = array(
 	'root_url' => 'https://www.newzbin.com/', 
 	'protocol' => 'https://',
 	'base_url' => 'www.newzbin.com/'
+);
+$config['nzbmatrix'] = array(
+	'root_url' => 'https://nzbmatrix.com/',
+	'protocol' => 'https://',
+	'base_url' => 'nzbmatrix.com/'
 );
 
 //pid
