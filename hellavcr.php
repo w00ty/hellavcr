@@ -1,6 +1,6 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 'off');
+ini_set('display_errors', 'on');
 set_time_limit(0);
 require_once('hellavcr.config.php');
 require_once('hellavcr.vars.php');
@@ -480,7 +480,7 @@ function get_show_info($show, $ep = '', $exact = '', $thetvdbid = 0) {
 				while(!feof($fp)) {
 					$line = fgets($fp);
 					if(strlen($line) == 0) continue; //line is empty
-					list($prop, $val) = explode('@', $line, 2);
+					list($prop, $val) = @explode('@', $line, 2);
 					
 					/*
 					"Show Name" (Name Of The TV Show)
@@ -579,6 +579,9 @@ function search_nzb($params) {
 	
 	switch($config['nzb_site']) {
 		case 'nzbmatrix':
+			//clean query
+			$params['show'] = str_replace($config['nzbmatrix']['strip_chars'], '', $params['show']);
+			
 			//main query
 			$q = $params['show'] . ' ' . 'S' . sprintf('%02d', $params['season']) . 'E' . sprintf('%02d', $params['episode']);
 			
@@ -620,7 +623,7 @@ function search_nzb($params) {
 					
 					if(isset($parts['NZBNAME'])) {
 						//check name has these terms
-						if(is_array($config['nzbmatrix_hasterms'])) {
+						if(!empty($config['nzbmatrix_hasterms'])) {
 							foreach($config['nzbmatrix_hasterms'] as $term) {
 								if(stripos($parts['NZBNAME'], $term) === false) {
 									$name_ok = false;
@@ -629,7 +632,7 @@ function search_nzb($params) {
 						}
 					
 						//check it doesn't have these ones
-						if($name_ok && is_array($config['nbzmatrix_noterms'])) {
+						if($name_ok && !empty($config['nbzmatrix_noterms'])) {
 							foreach($config['nbzmatrix_noterms'] as $term) {
 								if(stripos($parts['NZBNAME'], $term) !== false) {
 									$name_ok = false;

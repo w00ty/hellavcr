@@ -58,7 +58,7 @@ $GLOBALS['sources'] = array(
 	'512' => 'HD-DVD',
 	'1024' => 'R5 Retail',
 	'2048' => 'Blu-ray',
-	'1073741824' => 'Unknown',
+	'1073741824' => 'Unknown'
 );
 
 ##### nzbmatrix
@@ -112,7 +112,8 @@ $config['newzbin'] = array(
 $config['nzbmatrix'] = array(
 	'root_url' => 'https://nzbmatrix.com/',
 	'protocol' => 'https://',
-	'base_url' => 'nzbmatrix.com/'
+	'base_url' => 'nzbmatrix.com/',
+	'strip_chars' => array(':', '&', '(', ')', "'")
 );
 
 //pid

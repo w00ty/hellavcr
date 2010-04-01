@@ -24,8 +24,8 @@ $config = array(
 	//API key for nzbmatrix
 	'nzbmatrix_username' => 'username',
 	'nzbmatrix_key' => 'apikey',
-	'nzbmatrix_hasterms' => array(''), //show title must contain all these terms (i.e. 720p, hdtv)
-	'nbzmatrix_noterms' => array(''), //show title can't have any of these (i.e. web, line)
+	'nzbmatrix_hasterms' => array(), //show title must contain all these terms (i.e. 720p, hdtv)
+	'nbzmatrix_noterms' => array(), //show title can't have any of these (i.e. web, line)
 	
 	//days of retention for your newsgroup server
 	'ng_retention' => 120,
