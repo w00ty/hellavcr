@@ -1,6 +1,6 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 'on');
+ini_set('display_errors', 'off');
 set_time_limit(0);
 require_once('hellavcr.config.php');
 require_once('hellavcr.vars.php');
