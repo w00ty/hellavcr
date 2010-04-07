@@ -294,7 +294,7 @@ function process_tv() {
 
 								//newzbin has a limit of 5 nzb's per minute
 								//rate limit not needed in nzb mode since download_nzb handles the exact time to wait
-								if($config['nzb_handler'] == 'newzbin' && $shows_added % 5 == 0) {
+								if($config['nzb_handler'] != 'nzb' && $shows_added % 5 == 0) {
 									sleep(60);
 								}
 								
@@ -615,10 +615,10 @@ function search_nzb($params) {
 			
 		case 'nzbmatrix':
 			//clean query
-			$params['show'] = str_replace($config['nzbmatrix']['strip_chars'], '', $params['show']);
+			$showClean = str_replace($config['nzbmatrix']['strip_chars'], '', $params['show']);
 			
 			//main query
-			$q = $params['show'] . ' ' . 'S' . sprintf('%02d', $params['season']) . 'E' . sprintf('%02d', $params['episode']);
+			$q = $showClean . ' ' . 'S' . sprintf('%02d', $params['season']) . 'E' . sprintf('%02d', $params['episode']);
 			
 			//formatted query
 			$query = build_nzbmatrix_search_string(array(
@@ -628,6 +628,14 @@ function search_nzb($params) {
 			
 			//send to nzbmatrix
 			if($result = @file_get_contents($query, 'r')) {
+				//api rate limited exceeded, so wait the required time and try again
+				if(preg_match('/please_wait_(\d+)/', $result, $matches)) {
+					$sec = intval($matches[1]);
+					print 'FAIL (too many requests, retrying in ' . $sec . " seconds)\n";
+					sleep($sec);
+					return search_nzb($params);
+				}
+				
 				$result = str_replace("\n", '', $result);
 				$results = explode('|', $result);
 				
@@ -819,8 +827,8 @@ function download_nzb($nzb_info) {
 			if(stripos($nzb, 'error:') === 0) {
 				//api rate limited exceeded, so wait the required time and try again
 				if(preg_match('/please_wait_(\d+)/', $nzb, $matches)) {
-					$sec = $matches[1] + 1;
-					print 'FAIL (too many requests, retrying in ' . $sec . ' seconds';
+					$sec = intval($matches[1]);
+					print 'FAIL (too many requests, retrying in ' . $sec . " seconds)\n";
 					sleep($sec);
 					return download_nzb($nzb_info);
 				}
