@@ -10,6 +10,7 @@ $config = array(
 	//values:
 	//	newzbin
 	//	nzbmatrix
+	//	tvnzb
 	'nzb_site' => 'newzbin',
 	
 	//account info for newzbin
@@ -28,11 +29,11 @@ $config = array(
 	'nbzmatrix_noterms' => array(), //show title can't have any of these (i.e. web, line)
 	
 	//days of retention for your newsgroup server
-	'ng_retention' => 120,
+	'ng_retention' => 365,
 	
 	//newzbin handler
 	//values:
-	//	nzb: downoad the newzbin nzb file and move it to the nzb_queue directory
+	//	nzb: download the newzbin nzb file and move it to the nzb_queue directory
 	//	hellanzb: pass the newzbin id to hellanzb
 	//	sabnzbd: pass the newzbin id or NZB URL to sabnzbd
 	'nzb_handler' => 'nzb',

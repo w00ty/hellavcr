@@ -94,6 +94,7 @@ $config['project_url'] = 'http://code.google.com/p/hellavcr/';
 $config['logging'] = array(
 	'date_format' => '[m/d/y H:i:s] '
 );
+$config['scraper_refresh'] = 3600; //1hr
 $config['tvrage'] = array(
 	'quickinfo' => 'http://services.tvrage.com/tools/quickinfo.php',
 	'episode_list' => 'http://services.tvrage.com/feeds/episode_list.php'
@@ -105,7 +106,7 @@ $config['thetvdb'] = array(
 	'api_key' => 'A6D11F92201EEBFA'
 );
 $config['newzbin'] = array(
-	'root_url' => 'https://www.newzbin.com/', 
+	'root_url' => 'https://www.newzbin.com/',
 	'protocol' => 'https://',
 	'base_url' => 'www.newzbin.com/'
 );
@@ -114,6 +115,14 @@ $config['nzbmatrix'] = array(
 	'protocol' => 'https://',
 	'base_url' => 'nzbmatrix.com/',
 	'strip_chars' => array(':', '&', '(', ')', "'")
+);
+$config['tvnzb'] = array(
+	'root_url' => 'http://tvnzb.com/',
+	'protocol' => 'http://',
+	'base_url' => 'tvnzb.com/',
+	'rss_all' => 'http://www.tvnzb.com/tvnzb.rss',
+	'rss_new' => 'http://www.tvnzb.com/tvnzb_new.rss',
+	'rss_old' => 'http://www.tvnzb.com/tvnzb_old.rss'
 );
 
 //pid

@@ -50,13 +50,23 @@ function process_tv() {
 			$name = htmlspecialchars_decode($show->name) . $nameExtra;
 			print date($config['logging']['date_format']) . $name . "\n";
 			
-			//get info from tvrage
-			$show_info = get_show_info($show->name);
+			//add timestamp
+			if(empty($show->attributes()->updated)) {
+				$show->addAttribute('updated', 0);
+			}
+			
+			//get info from tv scraper if past the refresh time
+			$show_info = get_show_info($show);
 			
 			//no show info (skip)
 			if(empty($show_info)) {
 				print date($config['logging']['date_format']) . '	get show info FAILED! (' . $config['info_scraper'] . " likely down)\n";
 				continue;
+			}
+			
+			//update timestamp
+			if(!$show_info['cached']) {
+				$show->attributes()->updated = time();
 			}
 			
 			//make sure it has an ID
@@ -92,98 +102,104 @@ function process_tv() {
 				} 
 			}
 			
-			//auto update show name to match info scraper
-			if($config['update_show_name'] && strlen(trim($show_info['name'])) > 0 && trim($show->name) != $show_info['name']) {
-				$show->name = $show_info['name'];
-				print date($config['logging']['date_format']) . '	name updated to match ' . $config['info_scraper'] . ': ' . $show->name . "\n";
-			}
-			
-			//update tvrage series id
-			if(!$show->tvrageid) $show->addChild('tvrageid', $show_info['tvrageid']);
-			else $show->tvrageid = trim($show_info['tvrageid']);
-			
-			//update thetvdb series id
-			if(!$show->thetvdbid) $show->addChild('thetvdbid', $show_info['thetvdbid']);
-			else $show->thetvdbid = trim($show_info['thetvdbid']);
-
-			//episode list (seasons, eps)
-			if(!$show->episodelist) $show->addChild('episodelist', '');
-			
-			if(!empty($show_info['episodelist'])) {
-				foreach($show_info['episodelist'] as $season => $episodes) {
-					$s_existing = $show->episodelist->xpath('season[@num=' . $season . ']');
-					
-					//exists, so just update
-					if(!empty($s_existing)) {
-						$s_existing[0]['episodes'] = sizeof($episodes);
-					}
-					//add new
-					else {
-						$s = $show->episodelist->addChild('season');
-						$s->addAttribute('num', $season);
-						$s->addAttribute('episodes', sizeof($episodes));
-					}
-					
-					/*
-					//full episode details
-					foreach($episodes as $episode) {
-						$e = $s->addChild('episode');
-						$e->addAttribute('num', $episode['num']);
-						$e->addAttribute('aired', $episode['aired']);
-						$e->addAttribute('title', htmlentities($episode['title']));
-					}
-					*/
+			if(!$show_info['cached']) {
+				//auto update show name to match info scraper
+				if($config['update_show_name'] && strlen(trim($show_info['name'])) > 0 && trim($show->name) != $show_info['name']) {
+					$show->name = $show_info['name'];
+					print date($config['logging']['date_format']) . '	name updated to match ' . $config['info_scraper'] . ': ' . $show->name . "\n";
 				}
-			}
+			
+				//update tvrage series id
+				if(!$show->tvrageid) $show->addChild('tvrageid', $show_info['tvrageid']);
+				else $show->tvrageid = trim($show_info['tvrageid']);
+			
+				//update thetvdb series id
+				if(!$show->thetvdbid) $show->addChild('thetvdbid', $show_info['thetvdbid']);
+				else $show->thetvdbid = trim($show_info['thetvdbid']);
 
-			//update episode URL
-			if(!$show->url) $show->addChild('url', $show_info['Show URL']);
-			else $show->url = trim($show_info['Show URL']);
+				//episode list (seasons, eps)
+				if(!$show->episodelist) $show->addChild('episodelist', '');
 			
-			//update status
-			if(!$show->status) $show->addChild('status', $show_info['Status']);
-			else $show->status = htmlspecialchars(trim($show_info['Status']));
-			
-			//update airtime
-			if(!$show->airtime) $show->addChild('airtime', $show_info['Airtime']);
-			else $show->airtime = htmlspecialchars(trim($show_info['Airtime']));
-			
-			//update network
-			if(!$show->network) $show->addChild('network', $show_info['Network']);
-			else $show->network = htmlspecialchars(trim($show_info['Network']));
-			
-			//update year the show started
-			if(!$show->year) $show->addChild('year', $show_info['Premiered']);
-			else $show->year = htmlspecialchars(trim($show_info['Premiered']));
-			
-			//update next ep
-			$air_date = $show_info['Next Episode']['airdate'];
-			if(substr_count($air_date, '/') == 2) {
-				$date_parts = explode('/', $air_date);
-				$air_date = date('(l) F j, Y', strtotime($date_parts[1] . ' ' . $date_parts[0] . ' ' . $date_parts[2]));
-			}
-			$next_info = (strlen(trim($show_info['Next Episode']['episode'])) > 0 ? $show_info['Next Episode']['episode'] . ' - "' . $show_info['Next Episode']['title'] . '" airs ' . $air_date : '');
-			if(!$show->next) $show->addChild('next', htmlspecialchars(trim($next_info)));
-			else $show->next = htmlspecialchars(trim($next_info));
-			
-			//print date($config['logging']['date_format']) . '	next episode: ' . $show_info['Next Episode']['episode'] . "\n";
-			
-			//update next timestamp (includes date and time)
-			if(strpos($show_info['RFC3339'], 'T:00-') !== false) {
-				$time_prefix = '00:00';
-				if(strlen($show_info['Airtime']) > 0) {
-					$time_parts = explode('at', $show_info['Airtime']);
-					$time_prefix = date('H:i', strtotime('today ' . $time_parts[1]));
+				if(!empty($show_info['episodelist'])) {
+					foreach($show_info['episodelist'] as $season => $episodes) {
+						$s_existing = $show->episodelist->xpath('season[@num=' . $season . ']');
+					
+						//exists, so just update
+						if(!empty($s_existing)) {
+							$s_existing[0]['episodes'] = sizeof($episodes);
+						}
+						//add new
+						else {
+							$s = $show->episodelist->addChild('season');
+							$s->addAttribute('num', $season);
+							$s->addAttribute('episodes', sizeof($episodes));
+						}
+					
+						/*
+						//full episode details
+						foreach($episodes as $episode) {
+							$e = $s->addChild('episode');
+							$e->addAttribute('num', $episode['num']);
+							$e->addAttribute('aired', $episode['aired']);
+							$e->addAttribute('title', htmlentities($episode['title']));
+						}
+						*/
+					}
 				}
-				$show_info['next_timestamp'] = strtotime(str_replace('T:00-', 'T' . $time_prefix . ':00-', $show_info['RFC3339']));
-			}
+
+				//update episode URL
+				if(!$show->url) $show->addChild('url', $show_info['Show URL']);
+				else $show->url = trim($show_info['Show URL']);
 			
-			if(!$show->next_timestamp) $show->addChild('next_timestamp', $show_info['next_timestamp']);
-			else $show->next_timestamp = trim($show_info['next_timestamp']);
+				//update status
+				if(!$show->status) $show->addChild('status', $show_info['Status']);
+				else $show->status = htmlspecialchars(trim($show_info['Status']));
+			
+				//update airtime
+				if(!$show->airtime) $show->addChild('airtime', $show_info['Airtime']);
+				else $show->airtime = htmlspecialchars(trim($show_info['Airtime']));
+			
+				//update network
+				if(!$show->network) $show->addChild('network', $show_info['Network']);
+				else $show->network = htmlspecialchars(trim($show_info['Network']));
+			
+				//update year the show started
+				if(!$show->year) $show->addChild('year', $show_info['Premiered']);
+				else $show->year = htmlspecialchars(trim($show_info['Premiered']));
+			
+				//update next ep
+				$air_date = $show_info['Next Episode']['airdate'];
+				if(substr_count($air_date, '/') == 2) {
+					$date_parts = explode('/', $air_date);
+					$air_date = date('(l) F j, Y', strtotime($date_parts[1] . ' ' . $date_parts[0] . ' ' . $date_parts[2]));
+				}
+				$next_info = (strlen(trim($show_info['Next Episode']['episode'])) > 0 ? $show_info['Next Episode']['episode'] . ' - "' . $show_info['Next Episode']['title'] . '" airs ' . $air_date : '');
+				if(!$show->next) $show->addChild('next', htmlspecialchars(trim($next_info)));
+				else $show->next = htmlspecialchars(trim($next_info));
+			
+				//print date($config['logging']['date_format']) . '	next episode: ' . $show_info['Next Episode']['episode'] . "\n";
+			
+				//update next timestamp (includes date and time)
+				if(strpos($show_info['RFC3339'], 'T:00-') !== false) {
+					$time_prefix = '00:00';
+					if(strlen($show_info['Airtime']) > 0) {
+						$time_parts = explode('at', $show_info['Airtime']);
+						$time_prefix = date('H:i', strtotime('today ' . $time_parts[1]));
+					}
+					$show_info['next_timestamp'] = strtotime(str_replace('T:00-', 'T' . $time_prefix . ':00-', $show_info['RFC3339']));
+				}
+			
+				if(!$show->next_timestamp) $show->addChild('next_timestamp', $show_info['next_timestamp']);
+				else $show->next_timestamp = trim($show_info['next_timestamp']);
+				
+				//update latest episode
+				if(!$show->latest) $show->addChild('latest', trim($show_info['Latest Episode']['episode']));
+				else $show->latest = trim($show_info['Latest Episode']['episode']);
+			}
 			
 			//queue up any episodes prior to the last episode (there must be at least 1 aired episode)
-			if($show_info['Latest Episode']['episode']) {
-				$latest = explode('x', $show_info['Latest Episode']['episode']);
+			if($show->latest) {
+				$latest = explode('x', $show->latest);
 				$latest_season = intval($latest[0]);
 				$latest_episode = intval($latest[1]);
 
@@ -199,7 +215,7 @@ function process_tv() {
 				}
 				
 				//check on the day of air since tvrage doesn't update 'Latest Episode' until midnight
-				if($show_info['next_timestamp'] != '' && date('m/d/Y') == date('m/d/Y', $show_info['next_timestamp']) && $show->episode == $latest_episode) {
+				if(strval($show->next_timestamp) != '' && date('m/d/Y') == date('m/d/Y', strval($show->next_timestamp)) && $show->episode == $latest_episode) {
 					$pre_midnight_check = true;
 					$latest_episode = intval($latest_episode) + 1;
 				}
@@ -210,15 +226,15 @@ function process_tv() {
 				
 				//loop over all mising episodes
 				$current_season = intval($show->season);
-				while($current_season <= $latest_season && $current_season <= sizeof($show_info['episodelist'])) {
+				while($current_season <= $latest_season && $current_season <= sizeof($show->episodelist->xpath('season'))) {
 					$current_episode = ($current_season > intval($show->season) ? 0 : intval($show->episode + 1));
 						
 					while($current_episode <= $latest_episode || $current_season < $latest_season) {
 						$episode_string = $current_season . 'x' . sprintf('%02d', $current_episode);
-						$episode_info = get_show_info($show->name, $episode_string);
+						$episode_info = $show->episodelist->xpath('season[@num=' . $current_season . ']');
 						
 						//episode found, attempt to queue
-						if($episode_info['Episode Info']) {
+						if(sizeof($episode_info) > 0 && $episode_info[0]['episodes'] >= $current_episode) {
 							$nzb_info = false;
 							
 							$nzb_info = search_nzb(array(
@@ -240,6 +256,9 @@ function process_tv() {
 								switch($config['nzb_site']) {
 									case 'nzbmatrix':
 										$double_ep = (strpos($nzb_info['title'], 'E' . sprintf('%02d', $current_episode) . 'E' . sprintf('%02d', $current_episode + 1)));
+										break;
+									case 'tvnzb':
+										//--
 										break;
 									case 'newzbin':
 									default:
@@ -275,7 +294,7 @@ function process_tv() {
 
 								//newzbin has a limit of 5 nzb's per minute
 								//rate limit not needed in nzb mode since download_nzb handles the exact time to wait
-								if($config['nzb_handler'] != 'nzb' && $shows_added % 5 == 0) {
+								if($config['nzb_handler'] == 'newzbin' && $shows_added % 5 == 0) {
 									sleep(60);
 								}
 								
@@ -323,7 +342,8 @@ function process_tv() {
 								print "skipping this episode\n";
 								
 								//increment season if we're out of eps
-								if(isset($show_info['episodelist'][$current_season]) && (($current_episode + 1) > sizeof($show_info['episodelist'][$current_season]))) {
+								$seasonInfo = $show->episodelist->xpath('season[@num=' . $current_season . ']');
+								if(sizeof($seasonInfo) > 0 && (($current_episode + 1) > $seasonInfo[0]['episodes'])) {
 									break;
 								}
 							}
@@ -390,12 +410,18 @@ function get_show_info($show, $ep = '', $exact = '', $thetvdbid = 0) {
 		'next_timestamp' => '',
 		'tvrageid' => 0,
 		'thetvdbid' => 0, //$thetvdbid
-		'episodelist' => array()
+		'episodelist' => array(),
+		'cached' => false
 	);
-	
 	
 	//no show provided
 	if(!$show) return false;
+	
+	//use cached version
+	$timeDiff = time() - $show->attributes()->updated;
+	if($timeDiff < $config['scraper_refresh']) {
+		return array('cached' => true);
+	}
 	
 	if(empty($config['info_scraper'])) $config['info_scraper'] = '';
 	switch($config['info_scraper']) {
@@ -435,7 +461,7 @@ function get_show_info($show, $ep = '', $exact = '', $thetvdbid = 0) {
 			
 			//get series id (normally added on insert/update on index.php)
 			if($thetvdbid == 0) {
-				$sxe_series = simplexml_load_string(file_get_contents('http://www.thetvdb.com/api/GetSeries.php?seriesname=' . urlencode($show)));
+				$sxe_series = simplexml_load_string(file_get_contents('http://www.thetvdb.com/api/GetSeries.php?seriesname=' . urlencode($show->name)));
 				if(!$sxe_series) return false;
 				
 				/*
@@ -474,7 +500,7 @@ function get_show_info($show, $ep = '', $exact = '', $thetvdbid = 0) {
 		//get quickinfo from tvrage		 
 		case 'tvrage':
 		default:
-			if($fp = @fopen($config['tvrage']['quickinfo'] . '?show=' . urlencode($show) . '&ep=' . urlencode($ep) . '&exact=' . urlencode($exact), 'r')) {
+			if($fp = @fopen($config['tvrage']['quickinfo'] . '?show=' . urlencode($show->name) . '&ep=' . urlencode($ep) . '&exact=' . urlencode($exact), 'r')) {
 	
 				//get all info for the show
 				while(!feof($fp)) {
@@ -578,6 +604,15 @@ function search_nzb($params) {
 	print date($config['logging']['date_format']) . '	searching ' . $config['nzb_site'] . ' for ' . $q_debug . $config['debug_separator'];
 	
 	switch($config['nzb_site']) {
+		case 'tvnzb':
+			//cache rss feed
+			//--
+			
+			//search feed
+			//--
+		
+			break;
+			
 		case 'nzbmatrix':
 			//clean query
 			$params['show'] = str_replace($config['nzbmatrix']['strip_chars'], '', $params['show']);
@@ -748,13 +783,12 @@ function build_nzbmatrix_search_string($params) {
 	$query = array(
 		'search=' . urlencode($params['term']),
 		'age=' . $config['ng_retention'],
-		'catid=' . $GLOBALS['nzbmatrix_formats'][strval($params['format'])],
 		'num=5',
 		'username=' . $config['nzbmatrix_username'],
 		'apikey=' . $config['nzbmatrix_key']
 	);
-	if(!empty($config['newzbin_groups'])) {
-		$query[] = 'group=' . urlencode($config['newzbin_groups']);
+	if(!empty($params['format'])) {
+		$query[] = 'catid=' . $GLOBALS['nzbmatrix_formats'][strval($params['format'])];
 	}
 	
 	return $config['nzbmatrix']['protocol'] . $config['nzbmatrix']['base_url'] . 'api-nzb-search.php?' . implode( '&', $query);
@@ -766,6 +800,11 @@ function download_nzb($nzb_info) {
 	print 'downloading nzb' . $config['debug_separator'];
 	
 	switch($config['nzb_site']) {
+		case 'tvnzb':
+			//
+		
+			break;
+			
 		case 'nzbmatrix':
 			//newzbin info blank
 			if(empty($config['nzbmatrix_username']) || empty($config['nzbmatrix_key'])) {
