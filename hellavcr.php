@@ -51,7 +51,7 @@ function process_tv() {
 			print date($config['logging']['date_format']) . $name . "\n";
 			
 			//add timestamp
-			if(empty($show->attributes()->updated)) {
+			if(empty($show['updated'])) {
 				$show->addAttribute('updated', 0);
 			}
 			
@@ -66,11 +66,11 @@ function process_tv() {
 			
 			//update timestamp
 			if(!$show_info['cached']) {
-				$show->attributes()->updated = time();
+				$show['updated'] = time();
 			}
 			
 			//make sure it has an ID
-			if(empty($show->attributes()->id)) {
+			if(empty($show['id'])) {
 				$show->addAttribute('id', generate_id());
 			}
 			
@@ -627,12 +627,24 @@ function search_nzb($params) {
 				'format' => $params['format']
 			));
 			
+			//wait for next call if too son
+			if(!empty($GLOBALS['nzbmatrix_timestamp'])) {
+				$elapsed = time() - $GLOBALS['nzbmatrix_timestamp'];
+				if($elapsed < $config['nzbmatrix']['wait_time']) {
+					$wait = $config['nzbmatrix']['wait_time'] - $elapsed;
+					print 'waiting ' . $wait . 's for the API' . $config['debug_separator'];
+					sleep($wait);
+				}
+			}
+			
 			//send to nzbmatrix
 			if($result = @file_get_contents($query, 'r')) {
+				$GLOBALS['nzbmatrix_timestamp'] = time();
+				
 				//api rate limited exceeded, so wait the required time and try again
 				if(preg_match('/please_wait_(\d+)/', $result, $matches)) {
 					$sec = intval($matches[1]);
-					print 'FAIL (too many requests, retrying in ' . $sec . " seconds)\n";
+					print 'FAIL (too many requests, retrying in ' . $sec . "s)\n";
 					sleep($sec);
 					return search_nzb($params);
 				}
@@ -829,7 +841,7 @@ function download_nzb($nzb_info) {
 				//api rate limited exceeded, so wait the required time and try again
 				if(preg_match('/please_wait_(\d+)/', $nzb, $matches)) {
 					$sec = intval($matches[1]);
-					print 'FAIL (too many requests, retrying in ' . $sec . " seconds)\n";
+					print 'FAIL (too many requests, retrying in ' . $sec . "s)\n";
 					sleep($sec);
 					return download_nzb($nzb_info);
 				}
