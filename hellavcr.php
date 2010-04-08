@@ -418,12 +418,13 @@ function get_show_info($show, $ep = '', $exact = '', $thetvdbid = 0) {
 	if(!$show) return false;
 	
 	//use cached version
-	$timeDiff = time() - $show->attributes()->updated;
-	if($timeDiff < $config['scraper_refresh']) {
+	if(date('mdY', floatval($show['updated'])) == date('mdY')) {
 		return array('cached' => true);
 	}
 	
 	if(empty($config['info_scraper'])) $config['info_scraper'] = '';
+	print date($config['logging']['date_format']) . '	caching data from ' . $config['info_scraper'] . "\n";
+	
 	switch($config['info_scraper']) {
 		//use thetvdb api (IN PROGRESS)
 		case 'thetvdb':
