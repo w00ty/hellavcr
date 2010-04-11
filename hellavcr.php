@@ -619,7 +619,7 @@ function search_nzb($params) {
 			$showClean = str_replace($config['nzbmatrix']['strip_chars'], '', $params['show']);
 			
 			//main query
-			$q = $showClean . ' ' . 'S' . sprintf('%02d', $params['season']) . 'E' . sprintf('%02d', $params['episode']);
+			$q = $showClean . ' ' . 'S' . sprintf('%02d', $params['season']) . 'E' . sprintf('%02d', $params['episode']) . '"or"' . $showClean . ' ' . sprintf('%d',$params['season']) . 'x' . sprintf('%02d', $params['episode']);
 			
 			//formatted query
 			$query = build_nzbmatrix_search_string(array(
