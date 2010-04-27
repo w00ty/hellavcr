@@ -674,7 +674,6 @@ function search_nzb($params) {
 						@list($key, $value) = @explode(':', $line);
 						$parts[$key] = $value;
 					}
-					
 					$name_ok = true;
 					
 					if(isset($parts['NZBNAME'])) {
@@ -852,7 +851,9 @@ function download_nzb($nzb_info) {
 			}
 			//all good
 			else {
-				$fp_nzb = fopen($config['nzb_queue'] . str_replace('/', ' ', $nzb_info['title']) . '.nzb', 'w');
+				$filename = str_replace('/', ' ', $nzb_info['title']);
+				if(file_exists($config['nzb_queue'] . $filename . '.nzb')) $filename .= time();
+				$fp_nzb = fopen($config['nzb_queue'] . $filename . '.nzb', 'w');
 				$nzb_written = fwrite($fp_nzb, $nzb);
 				print ($nzb_written ? 'written' : 'FAIL (writing the nzb, check directory permissions)');
 				return $nzb_written;
@@ -895,6 +896,7 @@ function download_nzb($nzb_info) {
 				case 200:
 					$filename = trim($nzb_headers['X-DNZB-Name']);
 					$filename = str_replace('/', ' ', $filename);
+					if(file_exists($config['nzb_queue'] . $filename . '.nzb')) $filename .= time();
 					$fp_nzb = fopen($config['nzb_queue'] . $filename . '.nzb', 'w');
 					$nzb_written = fwrite($fp_nzb, $raw_nzb);
 					print ($nzb_written ? 'written' : 'FAIL (writing the nzb, check directory permissions)');
