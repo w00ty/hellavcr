@@ -114,7 +114,7 @@ $config['nzbmatrix'] = array(
 	'protocol' => 'https://',
 	'base_url' => 'nzbmatrix.com/',
 	'strip_chars' => array(':', '&', '(', ')', "'"),
-	'wait_time' => 60
+	'wait_time' => 10
 );
 $config['tvnzb'] = array(
 	'root_url' => 'http://tvnzb.com/',
