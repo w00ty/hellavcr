@@ -834,6 +834,7 @@ function download_nzb($nzb_info) {
 			
 			$url = $config['nzbmatrix']['root_url'] . 'api-nzb-download.php?' . 'id=' . $nzb_info['id'] . '&username=' . $config['nzbmatrix_username'] . '&apikey=' . $config['nzbmatrix_key'];
 			$nzb = @file_get_contents($url);
+			$nzb = gzdecode($nzb);
 			
 			//error
 			if(stripos($nzb, 'error:') === 0) {
@@ -1072,6 +1073,15 @@ function send_prowl($event, $description) {
 		'priority' => $config['prowl_priority']
 	), true);
 	return $prowl->getError();
+}
+
+function gzdecode($data){
+	$g=tempnam('/tmp','ff');
+	@file_put_contents($g,$data);
+ 	ob_start();
+ 	system('gzip -dc '.$g);
+ 	$d=ob_get_clean();
+ 	return $d;
 }
 
 ##### main call
