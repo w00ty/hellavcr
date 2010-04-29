@@ -627,7 +627,7 @@ function search_nzb($params) {
 				'format' => $params['format']
 			));
 			
-			//wait for next call if too son
+			//wait for next call if too soon
 			if(!empty($GLOBALS['nzbmatrix_timestamp'])) {
 				$elapsed = time() - $GLOBALS['nzbmatrix_timestamp'];
 				if($elapsed < $config['nzbmatrix']['wait_time']) {
