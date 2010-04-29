@@ -6,7 +6,7 @@ hellaVCR requires
     * PHP 5 (cli)
     * SimpleXML
     * cURL (w/ SSL support)
-    * a Newzbin account
+    * a Newzbin or NZBMatrix account
     * a usenet downloader (anything that support nzb files) 
 
 Optional components
