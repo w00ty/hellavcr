@@ -36,6 +36,8 @@ switch($_REQUEST['op']) {
 
 			$show = $xml->addChild('show');
 			$show->addAttribute('id', generate_id());
+			$show->addAttribute('hasterms', htmlspecialchars(trim($_POST['hasterms'])));
+			$show->addAttribute('noterms', htmlspecialchars(trim($_POST['noterms'])));
 			$show->addChild('name', htmlspecialchars(trim(get_magic_quotes_gpc() ? stripslashes($_POST['name']) : $_POST['name'])));
 			$show->addChild('format', $_POST['format']);
 			$show->addChild('language', $_POST['language']);
@@ -78,6 +80,12 @@ switch($_REQUEST['op']) {
 				$show->source = trim($_POST['source']);
 				$show->format = trim($_POST['format']);
 				$show->poster = trim($_POST['poster']);
+				
+				if(!isset($show['hasterms'])) $show->addAttribute('hasterms', htmlspecialchars(trim($_POST['hasterms'])));
+				else $show['hasterms'] = htmlspecialchars(trim($_POST['hasterms']));
+				
+				if(!isset($show['noterms'])) $show->addAttribute('noterms', htmlspecialchars(trim($_POST['noterms'])));
+				else $show['noterms'] = htmlspecialchars(trim($_POST['noterms']));
 				
 				$saved = saveXML($xml);
 				header('Location: ' . $_SERVER['REQUEST_URI'] . '#' . urlencode(trim($_POST['name'])));
@@ -242,7 +250,7 @@ function sortShows($show1, $show2) {
 		<table cellpadding="0" cellspacing="0">
 			<tr>
 				<th>Show Name:</th>
-				<td><input type="text" name="showName" id="showName" /></td>
+				<td><input type="text" name="showName" id="showName" class="tooltip-add" title="The full name of the show exactly as it appears on <?php echo empty($config['nzb_site']) ? 'newzbin' : $config['nzb_site']; ?>. Make sure to account for any country identifiers such as (US)." /></td>
 			</tr>
 			<tr>
 				<th></th>
@@ -254,7 +262,7 @@ function sortShows($show1, $show2) {
 			<tr>
 				<th>Last Episode:</th>
 				<td>
-					<input type="text" id="showSeason" size="2" /> x <input type="text" id="showEpisode" size="2" />
+					<input type="text" id="showSeason" size="2" class="tooltip-add" title="The last season you have downloaded an episode for. Leave blank if you haven't downloaded anything yet." /> x <input type="text" id="showEpisode" size="2" class="tooltip-add" title="The last episode (for your indicated season) you have downloaded an episode for. Leave blank if you haven't downloaded anything yet." />
 				</td>
 			</tr>
 			<tr>
@@ -289,6 +297,14 @@ function sortShows($show1, $show2) {
 						<?php } ?>
 					</select>
 				</td>
+			</tr>
+			<tr>
+				<th>Has Terms:</th>
+				<td><input type="text" name="hasterms" id="hasterms" class="tooltip-add" title="When searching for the show, ALL of these terms must be in the title. This is useful to prefer WEB downloads over tv caps for example. Separate mutiple terms with a comma." /></td>
+			</tr>
+			<tr>
+				<th>Skip Terms:</th>
+				<td><input type="text" name="noterms" id="noterms" class="tooltip-add" title="When searching for the show, NONE of these terms can be in the title. This is useful to elimiate certain group releases or releases with inferier audio. Separate mutiple terms with a comma." /></td>
 			</tr>
 			<tr>
 				<th></th>
@@ -613,12 +629,12 @@ if(file_exists($config['xml_tv'])) {
 					<table cellpadding="0" cellspacing="0">
 						<tr>
 							<th>Show Name:</th>
-							<td><input type="text" name="name" id="edit_<?php print $showID; ?>_name" value="<?php print htmlspecialchars_decode($show->name); ?>" /></td>
+							<td><input type="text" name="name" id="edit_<?php print $showID; ?>_name" value="<?php print htmlspecialchars_decode($show->name); ?>" class="tooltip-add" title="The full name of the show exactly as it appears on <?php echo empty($config['nzb_site']) ? 'newzbin' : $config['nzb_site']; ?>. Make sure to account for any country identifiers such as (US)." /></td>
 						</tr>
 						<tr>
 							<th>Last Episode:</th>
 							<td>
-								<input type="text" name="season" size="2" value="<?php print htmlentities($show->season); ?>" /> x <input type="text" name="episode" size="2" value="<?php print htmlentities($show->episode); ?>" />
+								<input type="text" name="season" size="2" value="<?php print htmlentities($show->season); ?>" class="tooltip-add" title="The last season you have downloaded an episode for. Leave blank if you haven't downloaded anything yet." /> x <input type="text" name="episode" size="2" value="<?php print htmlentities($show->episode); ?>" class="tooltip-add" title="The last episode (for your indicated season) you have downloaded an episode for. Leave blank if you haven't downloaded anything yet." />
 							</td>
 						</tr>
 						<tr>
@@ -653,6 +669,14 @@ if(file_exists($config['xml_tv'])) {
 									<?php } ?>
 								</select>
 							</td>
+						</tr>
+						<tr>
+							<th>Has Terms:</th>
+							<td><input type="text" name="hasterms" value="<?php print $show['hasterms']; ?>" class="tooltip-add" title="When searching for the show, ALL of these terms must be in the title. This is useful to prefer WEB downloads over tv caps for example. Separate mutiple terms with a comma." /></td>
+						</tr>
+						<tr>
+							<th>Skip Terms:</th>
+							<td><input type="text" name="noterms" value="<?php print $show['noterms']; ?>" class="tooltip-add" title="When searching for the show, NONE of these terms can be in the title. This is useful to elimiate certain group releases or releases with inferier audio. Separate mutiple terms with a comma." /></td>
 						</tr>
 						<tr>
 							<th></th>
