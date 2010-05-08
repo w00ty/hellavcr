@@ -2,6 +2,11 @@ posterURL = '';
 fx = [];
 
 window.addEvent('domready', function() {
+	//add tooltips
+	new Tips('.tooltip-add', {
+		className: 'addtip'
+	});
+	
 	//add form
 	var formSlide = new Fx.Slide('formWrapper').hide();
 	$('addButton').addEvent('click', function(e){
@@ -35,7 +40,7 @@ window.addEvent('domready', function() {
 					alert('Error saving the XML, make sure it has global write permissions!');
 				}
 			}
-		}).send('op=add&name=' + escape($('showName').value) + '&dlfull=' + ($('showFullSeries').checked ? '1' : '0') + '&dlnew=' + ($('showNewEpisodes').checked ? '1' : '0') + '&season=' + $('showSeason').value + '&episode=' + $('showEpisode').value + '&format=' + $('showFormat').get('value') + '&language=' + $('showLanguage').get('value') + '&source=' + $('showSource').get('value') + '&poster=' + posterURL);
+		}).send('op=add&name=' + escape($('showName').value) + '&dlfull=' + ($('showFullSeries').checked ? '1' : '0') + '&dlnew=' + ($('showNewEpisodes').checked ? '1' : '0') + '&season=' + $('showSeason').value + '&episode=' + $('showEpisode').value + '&format=' + $('showFormat').get('value') + '&language=' + $('showLanguage').get('value') + '&source=' + $('showSource').get('value') + '&poster=' + posterURL + '&hasterms=' + escape($('hasterms').value) + '&noterms=' + escape($('noterms').value));
 	});
 	
 	//delete button
